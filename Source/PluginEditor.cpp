@@ -31,10 +31,13 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
 
     addAndMakeVisible(volumeDial);
 
-    // Waveform display
+    // Waveform displays
     addAndMakeVisible(waveformDisplay);
     waveformDisplay.setPositionParameter(audioProcessor.getApvts().getRawParameterValue(PinkGrainAudioProcessor::POSITION_ID));
     waveformDisplay.setGrainSizeParameter(audioProcessor.getApvts().getRawParameterValue(PinkGrainAudioProcessor::GRAIN_SIZE_ID));
+
+    addAndMakeVisible(liveWaveformDisplay);
+    audioProcessor.setLiveWaveformDisplay(&liveWaveformDisplay);
 
     // Row 1 dials
     addAndMakeVisible(sizeDial);
@@ -96,6 +99,7 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
 
 PinkGrainAudioProcessorEditor::~PinkGrainAudioProcessorEditor()
 {
+    audioProcessor.setLiveWaveformDisplay(nullptr);
     setLookAndFeel(nullptr);
 }
 
@@ -120,9 +124,14 @@ void PinkGrainAudioProcessorEditor::resized()
 
     bounds.removeFromTop(10);
 
-    // Waveform display
+    // Waveform displays - side by side
     auto waveformArea = bounds.removeFromTop(180);
+    const int gap = 10;
+    const int liveWidth = 200;
+    auto liveArea = waveformArea.removeFromRight(liveWidth);
+    waveformArea.removeFromRight(gap);
     waveformDisplay.setBounds(waveformArea);
+    liveWaveformDisplay.setBounds(liveArea);
 
     bounds.removeFromTop(15);
 

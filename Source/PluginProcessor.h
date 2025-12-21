@@ -4,6 +4,8 @@
 #include "GrainEngine.h"
 #include "AudioFileLoader.h"
 
+class LiveWaveformDisplay;
+
 class PinkGrainAudioProcessor : public juce::AudioProcessor
 {
 public:
@@ -41,6 +43,9 @@ public:
     AudioFileLoader& getAudioFileLoader() { return audioFileLoader; }
     juce::AudioProcessorValueTreeState& getApvts() { return apvts; }
 
+    // Live waveform display connection
+    void setLiveWaveformDisplay(LiveWaveformDisplay* display) { liveWaveformDisplay = display; }
+
     // Parameter IDs
     static const juce::String GRAIN_SIZE_ID;
     static const juce::String DENSITY_ID;
@@ -62,6 +67,8 @@ private:
     AudioFileLoader audioFileLoader;
 
     juce::AudioProcessorValueTreeState apvts;
+
+    LiveWaveformDisplay* liveWaveformDisplay = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PinkGrainAudioProcessor)
 };

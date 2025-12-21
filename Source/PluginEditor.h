@@ -5,6 +5,7 @@
 #include "UI/LookAndFeel.h"
 #include "UI/CustomDial.h"
 #include "UI/WaveformDisplay.h"
+#include "UI/LiveWaveformDisplay.h"
 
 class PinkGrainAudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -27,8 +28,9 @@ private:
     juce::Label titleLabel;
     CustomDial volumeDial;
 
-    // Waveform display
+    // Waveform displays
     WaveformDisplay waveformDisplay;
+    LiveWaveformDisplay liveWaveformDisplay;
 
     // Parameter dials - Row 1
     CustomDial sizeDial;

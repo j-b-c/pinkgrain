@@ -44,6 +44,7 @@ target_sources(PinkGrain
         Source/UI/LookAndFeel.cpp
         Source/UI/CustomDial.cpp
         Source/UI/WaveformDisplay.cpp
+        Source/UI/LiveWaveformDisplay.cpp
 )
 
 # Generate JuceHeader.h

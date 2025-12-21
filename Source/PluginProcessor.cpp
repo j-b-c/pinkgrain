@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "UI/LiveWaveformDisplay.h"
 
 // Parameter IDs
 const juce::String PinkGrainAudioProcessor::GRAIN_SIZE_ID = "grainSize";
@@ -250,6 +251,14 @@ void PinkGrainAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Process grains
     grainEngine.process(buffer);
+
+    // Push samples to live waveform display
+    if (liveWaveformDisplay != nullptr && buffer.getNumChannels() >= 2)
+    {
+        liveWaveformDisplay->pushSamples(buffer.getReadPointer(0),
+                                          buffer.getReadPointer(1),
+                                          buffer.getNumSamples());
+    }
 }
 
 void PinkGrainAudioProcessor::updateGrainEngineParameters()
