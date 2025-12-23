@@ -1,16 +1,14 @@
 #include "WaveformDisplay.h"
 #include "LookAndFeel.h"
 
-WaveformDisplay::WaveformDisplay(AudioFileLoader& loader, GrainEngine& engine)
+WaveformDisplay::WaveformDisplay(AudioFileLoader& loader, GrainEngine& /*engine*/)
     : audioFileLoader(loader),
-      grainEngine(engine)
+      vBlankAttachment(this, [this] { onVBlank(); })
 {
-    startTimerHz(60);  // 60 FPS for smooth grain animations
 }
 
 WaveformDisplay::~WaveformDisplay()
 {
-    stopTimer();
 }
 
 void WaveformDisplay::paint(juce::Graphics& g)
@@ -31,7 +29,6 @@ void WaveformDisplay::paint(juce::Graphics& g)
     {
         drawWaveform(g, innerBounds);
         drawGrainWindow(g, innerBounds);
-        drawGrains(g, innerBounds);
     }
     else
     {
@@ -46,7 +43,7 @@ void WaveformDisplay::resized()
 {
 }
 
-void WaveformDisplay::timerCallback()
+void WaveformDisplay::onVBlank()
 {
     // Update source info from audio file loader
     if (audioFileLoader.hasFile())
@@ -55,9 +52,46 @@ void WaveformDisplay::timerCallback()
         sourceLengthSamples = audioFileLoader.getNumSamples();
     }
 
-    // Update cached grain info for thread-safe rendering
-    cachedGrainInfo = grainEngine.getActiveGrainInfo();
     repaint();
+}
+
+void WaveformDisplay::mouseDown(const juce::MouseEvent& event)
+{
+    if (audioFileLoader.hasFile())
+    {
+        isDragging = true;
+        updatePositionFromMouse(event);
+    }
+}
+
+void WaveformDisplay::mouseDrag(const juce::MouseEvent& event)
+{
+    if (isDragging)
+    {
+        updatePositionFromMouse(event);
+    }
+}
+
+void WaveformDisplay::mouseUp(const juce::MouseEvent& /*event*/)
+{
+    isDragging = false;
+}
+
+void WaveformDisplay::updatePositionFromMouse(const juce::MouseEvent& event)
+{
+    auto bounds = getLocalBounds().reduced(2);
+    if (bounds.isEmpty())
+        return;
+
+    float x = static_cast<float>(event.x - bounds.getX());
+    float width = static_cast<float>(bounds.getWidth());
+
+    float newPosition = juce::jlimit(0.0f, 1.0f, x / width);
+
+    if (onPositionChanged)
+    {
+        onPositionChanged(newPosition);
+    }
 }
 
 void WaveformDisplay::setPositionParameter(std::atomic<float>* positionParam)
@@ -151,64 +185,3 @@ void WaveformDisplay::drawGrainWindow(juce::Graphics& g, juce::Rectangle<int> bo
     g.drawVerticalLine(static_cast<int>(endX), static_cast<float>(bounds.getY()), static_cast<float>(bounds.getBottom()));
 }
 
-void WaveformDisplay::drawGrains(juce::Graphics& g, juce::Rectangle<int> bounds)
-{
-    if (cachedGrainInfo.empty())
-        return;
-
-    const int numGrains = static_cast<int>(cachedGrainInfo.size());
-    const float availableWidth = static_cast<float>(bounds.getWidth());
-
-    // Determine dot size - fixed at 3x3 pixels
-    const float dotSize = 3.0f;
-    const int maxVisibleDots = static_cast<int>(availableWidth / (dotSize + 1.0f));
-
-    int grainsPerDot = 1;
-    if (numGrains > maxVisibleDots)
-    {
-        grainsPerDot = (numGrains + maxVisibleDots - 1) / maxVisibleDots;
-    }
-
-    // Draw dots for grains
-    for (int i = 0; i < numGrains; i += grainsPerDot)
-    {
-        // Average properties if consolidating multiple grains
-        float avgPosition = 0.0f;
-        float avgEnvelope = 0.0f;
-        int count = 0;
-
-        for (size_t j = static_cast<size_t>(i); j < static_cast<size_t>(juce::jmin(i + grainsPerDot, numGrains)); ++j)
-        {
-            const auto& grain = cachedGrainInfo[j];
-            if (grain.active)
-            {
-                // Calculate position within the grain window based on progress
-                float grainWindowSize = grain.grainEndPosition - grain.grainStartPosition;
-                float posInWindow = grain.grainStartPosition + grain.grainProgress * grainWindowSize;
-                avgPosition += posInWindow;
-                avgEnvelope += grain.envelopeLevel;
-                ++count;
-            }
-        }
-
-        if (count == 0)
-            continue;
-
-        avgPosition /= static_cast<float>(count);
-        avgEnvelope /= static_cast<float>(count);
-
-        // Calculate dot position
-        float x = bounds.getX() + avgPosition * bounds.getWidth();
-
-        // Vertical position: spread dots across the height with some randomness based on index
-        float yNormalized = 0.5f + 0.3f * std::sin(static_cast<float>(i) * 0.7f);
-        float y = bounds.getY() + yNormalized * bounds.getHeight();
-
-        // Alpha based on envelope level
-        float alpha = avgEnvelope * 0.9f + 0.1f;
-
-        // Draw 3x3 dot
-        g.setColour(PinkGrainLookAndFeel::secondaryColour.withAlpha(alpha));
-        g.fillRect(x - dotSize * 0.5f, y - dotSize * 0.5f, dotSize, dotSize);
-    }
-}

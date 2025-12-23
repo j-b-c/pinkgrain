@@ -6,6 +6,7 @@
 #include "UI/CustomDial.h"
 #include "UI/WaveformDisplay.h"
 #include "UI/LiveWaveformDisplay.h"
+#include "UI/ZoomedWaveformDisplay.h"
 
 class PinkGrainAudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -31,6 +32,7 @@ private:
     // Waveform displays
     WaveformDisplay waveformDisplay;
     LiveWaveformDisplay liveWaveformDisplay;
+    ZoomedWaveformDisplay zoomedWaveformDisplay;
 
     // Parameter dials - Row 1
     CustomDial sizeDial;

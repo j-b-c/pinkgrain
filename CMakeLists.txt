@@ -27,6 +27,8 @@ juce_add_plugin(PinkGrain
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
+    VST3_COPY_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/VST3"
+    AU_COPY_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/Components"
     PLUGIN_MANUFACTURER_CODE Pgra
     PLUGIN_CODE Pgrn
     FORMATS AU VST3
@@ -45,6 +47,7 @@ target_sources(PinkGrain
         Source/UI/CustomDial.cpp
         Source/UI/WaveformDisplay.cpp
         Source/UI/LiveWaveformDisplay.cpp
+        Source/UI/ZoomedWaveformDisplay.cpp
 )
 
 # Generate JuceHeader.h

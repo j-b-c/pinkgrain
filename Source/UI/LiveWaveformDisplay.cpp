@@ -2,15 +2,14 @@
 #include "LookAndFeel.h"
 
 LiveWaveformDisplay::LiveWaveformDisplay()
+    : vBlankAttachment(this, [this] { onVBlank(); })
 {
     leftBuffer.fill(0.0f);
     rightBuffer.fill(0.0f);
-    startTimerHz(60);
 }
 
 LiveWaveformDisplay::~LiveWaveformDisplay()
 {
-    stopTimer();
 }
 
 void LiveWaveformDisplay::paint(juce::Graphics& g)
@@ -47,7 +46,7 @@ void LiveWaveformDisplay::resized()
     updateWaveformPath();
 }
 
-void LiveWaveformDisplay::timerCallback()
+void LiveWaveformDisplay::onVBlank()
 {
     updateWaveformPath();
     repaint();

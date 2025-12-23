@@ -6,6 +6,7 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
       audioProcessor(p),
       volumeDial("VOLUME"),
       waveformDisplay(p.getAudioFileLoader(), p.getGrainEngine()),
+      zoomedWaveformDisplay(p.getAudioFileLoader(), p.getGrainEngine()),
       sizeDial("SIZE"),
       densityDial("DENSITY"),
       positionDial("POSITION"),
@@ -38,6 +39,20 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
 
     addAndMakeVisible(liveWaveformDisplay);
     audioProcessor.setLiveWaveformDisplay(&liveWaveformDisplay);
+
+    // Zoomed waveform display
+    addAndMakeVisible(zoomedWaveformDisplay);
+    zoomedWaveformDisplay.setPositionParameter(audioProcessor.getApvts().getRawParameterValue(PinkGrainAudioProcessor::POSITION_ID));
+    zoomedWaveformDisplay.setGrainSizeParameter(audioProcessor.getApvts().getRawParameterValue(PinkGrainAudioProcessor::GRAIN_SIZE_ID));
+
+    // Set up mouse drag callback to update position parameter
+    waveformDisplay.onPositionChanged = [this](float newPosition)
+    {
+        if (auto* param = audioProcessor.getApvts().getParameter(PinkGrainAudioProcessor::POSITION_ID))
+        {
+            param->setValueNotifyingHost(param->convertTo0to1(newPosition));
+        }
+    };
 
     // Row 1 dials
     addAndMakeVisible(sizeDial);
@@ -94,7 +109,7 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
     pitchRandomAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         apvts, PinkGrainAudioProcessor::PITCH_RANDOM_ID, pitchRandomDial.getSlider());
 
-    setSize(800, 500);
+    setSize(800, 600);
 }
 
 PinkGrainAudioProcessorEditor::~PinkGrainAudioProcessorEditor()
@@ -125,7 +140,7 @@ void PinkGrainAudioProcessorEditor::resized()
     bounds.removeFromTop(10);
 
     // Waveform displays - side by side
-    auto waveformArea = bounds.removeFromTop(180);
+    auto waveformArea = bounds.removeFromTop(140);
     const int gap = 10;
     const int liveWidth = 200;
     auto liveArea = waveformArea.removeFromRight(liveWidth);
@@ -133,7 +148,13 @@ void PinkGrainAudioProcessorEditor::resized()
     waveformDisplay.setBounds(waveformArea);
     liveWaveformDisplay.setBounds(liveArea);
 
-    bounds.removeFromTop(15);
+    bounds.removeFromTop(5);
+
+    // Zoomed waveform display - full width below
+    auto zoomedArea = bounds.removeFromTop(80);
+    zoomedWaveformDisplay.setBounds(zoomedArea);
+
+    bounds.removeFromTop(10);
 
     // Parameter dials - Row 1
     auto row1 = bounds.removeFromTop(90);

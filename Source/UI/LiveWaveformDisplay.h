@@ -2,8 +2,7 @@
 
 #include <JuceHeader.h>
 
-class LiveWaveformDisplay : public juce::Component,
-                            public juce::Timer
+class LiveWaveformDisplay : public juce::Component
 {
 public:
     LiveWaveformDisplay();
@@ -11,12 +10,14 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-    void timerCallback() override;
 
     // Call from audio thread to push samples
     void pushSamples(const float* leftChannel, const float* rightChannel, int numSamples);
 
 private:
+    void onVBlank();
+    void updateWaveformPath();
+
     static constexpr int BUFFER_SIZE = 2048;
 
     std::array<float, BUFFER_SIZE> leftBuffer;
@@ -27,7 +28,8 @@ private:
     juce::Path waveformPath;
     juce::CriticalSection pathLock;
 
-    void updateWaveformPath();
+    // VBlank sync for display refresh rate
+    juce::VBlankAttachment vBlankAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LiveWaveformDisplay)
 };
