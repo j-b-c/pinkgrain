@@ -3,11 +3,14 @@
 const juce::Colour PinkGrainLookAndFeel::backgroundColour = juce::Colour(0xFF0D0D0D);
 const juce::Colour PinkGrainLookAndFeel::primaryColour = juce::Colour(0xFFFF1493);
 const juce::Colour PinkGrainLookAndFeel::secondaryColour = juce::Colour(0xFFFF69B4);
-const juce::Colour PinkGrainLookAndFeel::textColour = juce::Colour(0xFFFFFFFF);
+const juce::Colour PinkGrainLookAndFeel::textColour = juce::Colour(0xFFFF1493);  // Same as primary
 const juce::Colour PinkGrainLookAndFeel::darkAccentColour = juce::Colour(0xFF1A1A1A);
 
 PinkGrainLookAndFeel::PinkGrainLookAndFeel()
 {
+    // Set default sans-serif font
+    setDefaultSansSerifTypefaceName("Helvetica");
+
     setColour(juce::ResizableWindow::backgroundColourId, backgroundColour);
     setColour(juce::Label::textColourId, textColour);
     setColour(juce::TextButton::buttonColourId, darkAccentColour);

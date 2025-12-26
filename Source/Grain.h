@@ -16,7 +16,8 @@ public:
                float attackSamples,
                float releaseSamples,
                bool reverse,
-               float velocity);
+               float velocity,
+               int midiNoteNumber);
 
     void process(juce::AudioBuffer<float>& outputBuffer,
                  int startSample,
@@ -26,15 +27,19 @@ public:
     bool isActive() const { return active; }
     bool isDone() const { return done; }
 
+    // Trigger early release phase (called on note-off)
+    void triggerRelease();
+
     float getCurrentPosition() const;
     float getEnvelopeLevel() const { return currentEnvelopeLevel; }
     int getStartSampleInSource() const { return sourceSampleStart; }
     int getGrainLength() const { return grainLength; }
     float getProgress() const { return grainLength > 0 ? static_cast<float>(samplesProcessed) / static_cast<float>(grainLength) : 0.0f; }
     int getSourceLength() const { return source ? source->getNumSamples() : 0; }
+    int getMidiNote() const { return midiNote; }
 
 private:
-    float getEnvelope(int sampleIndex) const;
+    float getEnvelope();
     float interpolateSample(const juce::AudioBuffer<float>& buffer, int channel, double position) const;
 
     const juce::AudioBuffer<float>* source = nullptr;
@@ -49,6 +54,7 @@ private:
     float releaseSamples = 0.0f;
     bool reverse = false;
     float velocity = 1.0f;
+    int midiNote = -1;
 
     double currentPosition = 0.0;
     int samplesProcessed = 0;
@@ -56,6 +62,11 @@ private:
 
     bool active = false;
     bool done = true;
+
+    // Release state
+    bool releasing = false;
+    int releaseSampleStart = 0;
+    float releaseStartLevel = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Grain)
 };

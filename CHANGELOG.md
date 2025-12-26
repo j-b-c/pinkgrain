@@ -2,6 +2,22 @@
 
 All notable changes to PinkGrain will be documented in this file.
 
+## [1.2.0] - 2025-12-26
+
+### Added
+- **Preset System**: Save and load presets via dropdown menu, stored in ~/Library/Application Support/PinkGrain/Presets/
+- **Session Persistence**: Plugin automatically restores previous session state (loaded file and all parameters) on launch
+- **Volume Meter**: Horizontal volume control with live stereo level display
+- **Per-Note Grain Release**: Grains now release when their triggering MIDI note is released, not when all notes are released
+
+### Changed
+- Font changed to Helvetica for cleaner appearance
+- Volume control redesigned as horizontal bar with integrated level meter
+- Text color unified with primary pink (#FF1493)
+
+### Fixed
+- Grain envelope release now correctly responds to individual note-off events
+
 ## [1.1.0] - 2025-12-22
 
 ### Added

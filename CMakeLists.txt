@@ -48,6 +48,7 @@ target_sources(PinkGrain
         Source/UI/WaveformDisplay.cpp
         Source/UI/LiveWaveformDisplay.cpp
         Source/UI/ZoomedWaveformDisplay.cpp
+        Source/UI/VolumeControl.cpp
 )
 
 # Generate JuceHeader.h

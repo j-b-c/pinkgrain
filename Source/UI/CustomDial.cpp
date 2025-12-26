@@ -10,12 +10,12 @@ CustomDial::CustomDial(const juce::String& labelText)
     nameLabel.setText(labelText, juce::dontSendNotification);
     nameLabel.setJustificationType(juce::Justification::centred);
     nameLabel.setColour(juce::Label::textColourId, PinkGrainLookAndFeel::textColour);
-    nameLabel.setFont(juce::FontOptions(12.0f));
+    nameLabel.setFont(juce::FontOptions(11.0f));
     addAndMakeVisible(nameLabel);
 
     valueLabel.setJustificationType(juce::Justification::centred);
-    valueLabel.setColour(juce::Label::textColourId, PinkGrainLookAndFeel::primaryColour);
-    valueLabel.setFont(juce::FontOptions(11.0f));
+    valueLabel.setColour(juce::Label::textColourId, PinkGrainLookAndFeel::textColour);
+    valueLabel.setFont(juce::FontOptions(10.0f));
     addAndMakeVisible(valueLabel);
 
     slider.onValueChange = [this]()

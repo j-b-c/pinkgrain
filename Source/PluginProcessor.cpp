@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "UI/LiveWaveformDisplay.h"
+#include "UI/VolumeControl.h"
 
 // Parameter IDs
 const juce::String PinkGrainAudioProcessor::GRAIN_SIZE_ID = "grainSize";
@@ -20,10 +21,12 @@ PinkGrainAudioProcessor::PinkGrainAudioProcessor()
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "Parameters", createParameterLayout())
 {
+    restoreSession();
 }
 
 PinkGrainAudioProcessor::~PinkGrainAudioProcessor()
 {
+    saveSession();
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout PinkGrainAudioProcessor::createParameterLayout()
@@ -259,6 +262,14 @@ void PinkGrainAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                           buffer.getReadPointer(1),
                                           buffer.getNumSamples());
     }
+
+    // Push samples to volume control for level metering
+    if (volumeControl != nullptr && buffer.getNumChannels() >= 2)
+    {
+        volumeControl->pushSamples(buffer.getReadPointer(0),
+                                   buffer.getReadPointer(1),
+                                   buffer.getNumSamples());
+    }
 }
 
 void PinkGrainAudioProcessor::updateGrainEngineParameters()
@@ -289,6 +300,10 @@ juce::AudioProcessorEditor* PinkGrainAudioProcessor::createEditor()
 void PinkGrainAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
+
+    // Add file path as a property
+    state.setProperty("audioFilePath", currentFilePath, nullptr);
+
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
 }
@@ -301,7 +316,105 @@ void PinkGrainAudioProcessor::setStateInformation(const void* data, int sizeInBy
     {
         if (xmlState->hasTagName(apvts.state.getType()))
         {
-            apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
+            auto newState = juce::ValueTree::fromXml(*xmlState);
+
+            // Extract and restore file path
+            juce::String filePath = newState.getProperty("audioFilePath", "").toString();
+            if (filePath.isNotEmpty())
+            {
+                juce::File file(filePath);
+                if (file.existsAsFile())
+                {
+                    audioFileLoader.loadFile(file);
+                    currentFilePath = filePath;
+                }
+            }
+
+            apvts.replaceState(newState);
+        }
+    }
+}
+
+void PinkGrainAudioProcessor::setCurrentFilePath(const juce::String& path)
+{
+    currentFilePath = path;
+}
+
+juce::File PinkGrainAudioProcessor::getPresetsDirectory() const
+{
+    juce::File presetDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                              .getChildFile("PinkGrain")
+                              .getChildFile("Presets");
+    presetDir.createDirectory();
+    return presetDir;
+}
+
+juce::StringArray PinkGrainAudioProcessor::getPresetList() const
+{
+    juce::StringArray presets;
+    juce::File presetDir = getPresetsDirectory();
+
+    for (const auto& file : presetDir.findChildFiles(juce::File::findFiles, false, "*.xml"))
+    {
+        presets.add(file.getFileNameWithoutExtension());
+    }
+
+    presets.sort(true);
+    return presets;
+}
+
+void PinkGrainAudioProcessor::savePreset(const juce::String& presetName)
+{
+    juce::File presetFile = getPresetsDirectory().getChildFile(presetName + ".xml");
+
+    juce::MemoryBlock data;
+    getStateInformation(data);
+
+    presetFile.replaceWithData(data.getData(), data.getSize());
+}
+
+void PinkGrainAudioProcessor::loadPreset(const juce::String& presetName)
+{
+    juce::File presetFile = getPresetsDirectory().getChildFile(presetName + ".xml");
+
+    if (presetFile.existsAsFile())
+    {
+        juce::MemoryBlock data;
+        if (presetFile.loadFileAsData(data))
+        {
+            setStateInformation(data.getData(), static_cast<int>(data.getSize()));
+        }
+    }
+}
+
+juce::File PinkGrainAudioProcessor::getSessionFile() const
+{
+    juce::File appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                               .getChildFile("PinkGrain");
+    appDataDir.createDirectory();
+    return appDataDir.getChildFile("lastSession.xml");
+}
+
+void PinkGrainAudioProcessor::saveSession()
+{
+    juce::File sessionFile = getSessionFile();
+
+    juce::MemoryBlock data;
+    getStateInformation(data);
+
+    sessionFile.replaceWithData(data.getData(), data.getSize());
+}
+
+void PinkGrainAudioProcessor::restoreSession()
+{
+    juce::File sessionFile = getSessionFile();
+
+    if (sessionFile.existsAsFile())
+    {
+        juce::MemoryBlock data;
+        if (sessionFile.loadFileAsData(data))
+        {
+            setStateInformation(data.getData(), static_cast<int>(data.getSize()));
         }
     }
 }

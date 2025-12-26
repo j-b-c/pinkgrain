@@ -5,6 +5,7 @@
 #include "AudioFileLoader.h"
 
 class LiveWaveformDisplay;
+class VolumeControl;
 
 class PinkGrainAudioProcessor : public juce::AudioProcessor
 {
@@ -43,8 +44,23 @@ public:
     AudioFileLoader& getAudioFileLoader() { return audioFileLoader; }
     juce::AudioProcessorValueTreeState& getApvts() { return apvts; }
 
+    // File path for state save/restore
+    void setCurrentFilePath(const juce::String& path);
+    juce::String getCurrentFilePath() const { return currentFilePath; }
+
+    // Preset management
+    void savePreset(const juce::String& presetName);
+    void loadPreset(const juce::String& presetName);
+    juce::StringArray getPresetList() const;
+    juce::File getPresetsDirectory() const;
+
+    // Session persistence
+    void saveSession();
+    void restoreSession();
+
     // Live waveform display connection
     void setLiveWaveformDisplay(LiveWaveformDisplay* display) { liveWaveformDisplay = display; }
+    void setVolumeControl(VolumeControl* control) { volumeControl = control; }
 
     // Parameter IDs
     static const juce::String GRAIN_SIZE_ID;
@@ -62,6 +78,7 @@ public:
 private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void updateGrainEngineParameters();
+    juce::File getSessionFile() const;
 
     GrainEngine grainEngine;
     AudioFileLoader audioFileLoader;
@@ -69,6 +86,9 @@ private:
     juce::AudioProcessorValueTreeState apvts;
 
     LiveWaveformDisplay* liveWaveformDisplay = nullptr;
+    VolumeControl* volumeControl = nullptr;
+
+    juce::String currentFilePath;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PinkGrainAudioProcessor)
 };

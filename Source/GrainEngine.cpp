@@ -33,11 +33,31 @@ void GrainEngine::noteOn(int midiNote, float velocity)
 void GrainEngine::noteOff(int midiNote)
 {
     activeNotes.erase(midiNote);
+
+    // Trigger release only on grains that belong to this specific note
+    juce::ScopedLock lock(grainLock);
+    for (auto& grain : grains)
+    {
+        if (grain->isActive() && grain->getMidiNote() == midiNote)
+        {
+            grain->triggerRelease();
+        }
+    }
 }
 
 void GrainEngine::allNotesOff()
 {
     activeNotes.clear();
+
+    // Trigger release on all active grains
+    juce::ScopedLock lock(grainLock);
+    for (auto& grain : grains)
+    {
+        if (grain->isActive())
+        {
+            grain->triggerRelease();
+        }
+    }
 }
 
 void GrainEngine::process(juce::AudioBuffer<float>& outputBuffer)
@@ -140,7 +160,7 @@ void GrainEngine::spawnGrain(int midiNote, float velocity)
     }
 
     grain->start(*sourceBuffer, sourceSampleRate, startSample, grainLengthSamples,
-                 pitchRatio, pan, attackSamples, releaseSamples, reverse, velocity);
+                 pitchRatio, pan, attackSamples, releaseSamples, reverse, velocity, midiNote);
 }
 
 Grain* GrainEngine::getInactiveGrain()

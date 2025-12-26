@@ -13,7 +13,8 @@ void Grain::start(const juce::AudioBuffer<float>& sourceBuffer,
                   float attack,
                   float release,
                   bool rev,
-                  float vel)
+                  float vel,
+                  int midiNoteNumber)
 {
     source = &sourceBuffer;
     sourceSampleRate = srcSampleRate;
@@ -24,6 +25,7 @@ void Grain::start(const juce::AudioBuffer<float>& sourceBuffer,
     releaseSamples = release;
     reverse = rev;
     velocity = vel;
+    midiNote = midiNoteNumber;
 
     // Equal power panning
     float panAngle = pan * juce::MathConstants<float>::halfPi * 0.5f;
@@ -36,6 +38,11 @@ void Grain::start(const juce::AudioBuffer<float>& sourceBuffer,
 
     active = true;
     done = false;
+
+    // Reset release state
+    releasing = false;
+    releaseSampleStart = 0;
+    releaseStartLevel = 0.0f;
 }
 
 void Grain::process(juce::AudioBuffer<float>& outputBuffer,
@@ -53,6 +60,7 @@ void Grain::process(juce::AudioBuffer<float>& outputBuffer,
 
     for (int i = 0; i < numSamples; ++i)
     {
+        // Check if we've reached the end of the grain or finished releasing
         if (samplesProcessed >= grainLength)
         {
             active = false;
@@ -61,7 +69,15 @@ void Grain::process(juce::AudioBuffer<float>& outputBuffer,
         }
 
         // Calculate envelope
-        currentEnvelopeLevel = getEnvelope(samplesProcessed);
+        currentEnvelopeLevel = getEnvelope();
+
+        // If releasing and envelope has reached zero, we're done
+        if (releasing && currentEnvelopeLevel <= 0.001f)
+        {
+            active = false;
+            done = true;
+            return;
+        }
 
         // Get source position
         int sourcePos = sourceSampleStart + static_cast<int>(currentPosition);
@@ -111,25 +127,48 @@ void Grain::process(juce::AudioBuffer<float>& outputBuffer,
     }
 }
 
-float Grain::getEnvelope(int sampleIndex) const
+void Grain::triggerRelease()
+{
+    if (!active || releasing)
+        return;
+
+    releasing = true;
+    releaseSampleStart = samplesProcessed;
+    releaseStartLevel = currentEnvelopeLevel;
+}
+
+float Grain::getEnvelope()
 {
     if (grainLength <= 0)
         return 0.0f;
 
+    // If we're in early release mode (triggered by note-off)
+    if (releasing)
+    {
+        int samplesSinceRelease = samplesProcessed - releaseSampleStart;
+        if (releaseSamples > 0.0f && samplesSinceRelease < static_cast<int>(releaseSamples))
+        {
+            float releaseProgress = static_cast<float>(samplesSinceRelease) / releaseSamples;
+            float env = releaseStartLevel * (1.0f - releaseProgress);
+            return 0.5f * (1.0f - std::cos(env * juce::MathConstants<float>::pi));
+        }
+        return 0.0f;
+    }
+
     float env = 1.0f;
 
     // Attack phase
-    if (attackSamples > 0.0f && sampleIndex < static_cast<int>(attackSamples))
+    if (attackSamples > 0.0f && samplesProcessed < static_cast<int>(attackSamples))
     {
-        env = static_cast<float>(sampleIndex) / attackSamples;
+        env = static_cast<float>(samplesProcessed) / attackSamples;
     }
-    // Release phase
+    // Natural release phase (at end of grain)
     else if (releaseSamples > 0.0f)
     {
         int releaseStart = grainLength - static_cast<int>(releaseSamples);
-        if (sampleIndex >= releaseStart)
+        if (samplesProcessed >= releaseStart)
         {
-            env = 1.0f - (static_cast<float>(sampleIndex - releaseStart) / releaseSamples);
+            env = 1.0f - (static_cast<float>(samplesProcessed - releaseStart) / releaseSamples);
         }
     }
 

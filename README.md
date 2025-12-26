@@ -11,6 +11,9 @@ A granular synthesizer plugin built with JUCE. Supports VST3 and AU formats on m
 - **Click-and-Drag Position**: Click and drag on the waveform to set playback position
 - **Live Output Display**: See the output waveform in real-time
 - **VBlank Sync**: Display updates synchronized to monitor refresh rate
+- **Preset System**: Save and load presets with automatic storage
+- **Session Persistence**: Automatically restores previous session on launch
+- **Per-Note Release**: Grains release individually when their MIDI note is released
 
 ### Parameters
 
@@ -71,9 +74,9 @@ synth/
 ├── README.md
 ├── CHANGELOG.md
 └── Source/
-    ├── PluginProcessor.h/cpp    # Audio processing and MIDI handling
+    ├── PluginProcessor.h/cpp    # Audio processing, MIDI, presets, session
     ├── PluginEditor.h/cpp       # Main UI
-    ├── Grain.h/cpp              # Individual grain with interpolation
+    ├── Grain.h/cpp              # Individual grain with per-note tracking
     ├── GrainEngine.h/cpp        # Grain pool and spawning logic
     ├── AudioFileLoader.h/cpp    # Audio file loading and thumbnails
     └── UI/
@@ -81,7 +84,8 @@ synth/
         ├── CustomDial.h/cpp            # Rotary dial component
         ├── WaveformDisplay.h/cpp       # File waveform with grain window
         ├── ZoomedWaveformDisplay.h/cpp # Zoomed grain window with dots
-        └── LiveWaveformDisplay.h/cpp   # Real-time output waveform
+        ├── LiveWaveformDisplay.h/cpp   # Real-time output waveform
+        └── VolumeControl.h/cpp         # Volume slider with level meter
 ```
 
 ## UI Theme
@@ -89,7 +93,8 @@ synth/
 - Background: #0D0D0D (near black)
 - Primary: #FF1493 (deep pink)
 - Secondary: #FF69B4 (hot pink)
-- Text: #FFFFFF (white)
+- Text: #FF1493 (deep pink)
+- Font: Helvetica
 
 ## License
 

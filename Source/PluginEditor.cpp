@@ -4,7 +4,6 @@
 PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProcessor& p)
     : AudioProcessorEditor(&p),
       audioProcessor(p),
-      volumeDial("VOLUME"),
       waveformDisplay(p.getAudioFileLoader(), p.getGrainEngine()),
       zoomedWaveformDisplay(p.getAudioFileLoader(), p.getGrainEngine()),
       sizeDial("SIZE"),
@@ -20,9 +19,18 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
     setLookAndFeel(&lookAndFeel);
 
     // Header components
-    loadFileButton.setButtonText("Load File");
+    loadFileButton.setButtonText("Load");
     loadFileButton.onClick = [this]() { loadFileButtonClicked(); };
     addAndMakeVisible(loadFileButton);
+
+    savePresetButton.setButtonText("Save");
+    savePresetButton.onClick = [this]() { savePresetButtonClicked(); };
+    addAndMakeVisible(savePresetButton);
+
+    presetCombo.setTextWhenNothingSelected("Presets...");
+    presetCombo.onChange = [this]() { presetComboChanged(); };
+    addAndMakeVisible(presetCombo);
+    refreshPresetList();
 
     titleLabel.setText("PINKGRAIN", juce::dontSendNotification);
     titleLabel.setFont(juce::FontOptions(24.0f).withStyle("Bold"));
@@ -30,7 +38,8 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
     titleLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(titleLabel);
 
-    addAndMakeVisible(volumeDial);
+    addAndMakeVisible(volumeControl);
+    audioProcessor.setVolumeControl(&volumeControl);
 
     // Waveform displays
     addAndMakeVisible(waveformDisplay);
@@ -77,7 +86,7 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
     auto& apvts = audioProcessor.getApvts();
 
     volumeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvts, PinkGrainAudioProcessor::VOLUME_ID, volumeDial.getSlider());
+        apvts, PinkGrainAudioProcessor::VOLUME_ID, volumeControl.getSlider());
 
     sizeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         apvts, PinkGrainAudioProcessor::GRAIN_SIZE_ID, sizeDial.getSlider());
@@ -115,6 +124,7 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
 PinkGrainAudioProcessorEditor::~PinkGrainAudioProcessorEditor()
 {
     audioProcessor.setLiveWaveformDisplay(nullptr);
+    audioProcessor.setVolumeControl(nullptr);
     setLookAndFeel(nullptr);
 }
 
@@ -129,11 +139,15 @@ void PinkGrainAudioProcessorEditor::resized()
 
     // Header row
     auto headerRow = bounds.removeFromTop(50);
-    loadFileButton.setBounds(headerRow.removeFromLeft(100));
+    loadFileButton.setBounds(headerRow.removeFromLeft(70));
+    headerRow.removeFromLeft(5);
+    savePresetButton.setBounds(headerRow.removeFromLeft(70));
+    headerRow.removeFromLeft(5);
+    presetCombo.setBounds(headerRow.removeFromLeft(150).reduced(0, 10));
     headerRow.removeFromLeft(10);
 
-    auto volumeArea = headerRow.removeFromRight(70);
-    volumeDial.setBounds(volumeArea);
+    auto volumeArea = headerRow.removeFromRight(200);
+    volumeControl.setBounds(volumeArea.reduced(0, 12));
 
     titleLabel.setBounds(headerRow);
 
@@ -185,7 +199,7 @@ void PinkGrainAudioProcessorEditor::resized()
 void PinkGrainAudioProcessorEditor::loadFileButtonClicked()
 {
     fileChooser = std::make_unique<juce::FileChooser>(
-        "Select a WAV file to load...",
+        "Select an audio file to load...",
         juce::File{},
         "*.wav;*.aif;*.aiff;*.mp3;*.flac");
 
@@ -197,6 +211,56 @@ void PinkGrainAudioProcessorEditor::loadFileButtonClicked()
         if (file.existsAsFile())
         {
             audioProcessor.getAudioFileLoader().loadFile(file);
+            audioProcessor.setCurrentFilePath(file.getFullPathName());
         }
     });
+}
+
+void PinkGrainAudioProcessorEditor::savePresetButtonClicked()
+{
+    auto presetName = std::make_unique<juce::AlertWindow>(
+        "Save Preset",
+        "Enter a name for the preset:",
+        juce::MessageBoxIconType::NoIcon);
+
+    presetName->addTextEditor("name", "", "Preset Name:");
+    presetName->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    presetName->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    presetName->enterModalState(true, juce::ModalCallbackFunction::create(
+        [this, alertWindow = presetName.release()](int result)
+        {
+            std::unique_ptr<juce::AlertWindow> aw(alertWindow);
+            if (result == 1)
+            {
+                juce::String name = aw->getTextEditorContents("name").trim();
+                if (name.isNotEmpty())
+                {
+                    audioProcessor.savePreset(name);
+                    refreshPresetList();
+                }
+            }
+        }));
+}
+
+void PinkGrainAudioProcessorEditor::presetComboChanged()
+{
+    int selectedId = presetCombo.getSelectedId();
+    if (selectedId > 0)
+    {
+        juce::String presetName = presetCombo.getItemText(presetCombo.getSelectedItemIndex());
+        audioProcessor.loadPreset(presetName);
+    }
+}
+
+void PinkGrainAudioProcessorEditor::refreshPresetList()
+{
+    presetCombo.clear(juce::dontSendNotification);
+
+    juce::StringArray presets = audioProcessor.getPresetList();
+    int id = 1;
+    for (const auto& preset : presets)
+    {
+        presetCombo.addItem(preset, id++);
+    }
 }

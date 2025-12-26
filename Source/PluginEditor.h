@@ -7,6 +7,7 @@
 #include "UI/WaveformDisplay.h"
 #include "UI/LiveWaveformDisplay.h"
 #include "UI/ZoomedWaveformDisplay.h"
+#include "UI/VolumeControl.h"
 
 class PinkGrainAudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -19,6 +20,9 @@ public:
 
 private:
     void loadFileButtonClicked();
+    void savePresetButtonClicked();
+    void presetComboChanged();
+    void refreshPresetList();
 
     PinkGrainAudioProcessor& audioProcessor;
 
@@ -26,8 +30,10 @@ private:
 
     // Header
     juce::TextButton loadFileButton;
+    juce::TextButton savePresetButton;
+    juce::ComboBox presetCombo;
     juce::Label titleLabel;
-    CustomDial volumeDial;
+    VolumeControl volumeControl;
 
     // Waveform displays
     WaveformDisplay waveformDisplay;
