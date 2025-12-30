@@ -126,13 +126,13 @@ void PinkGrainLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button&
     if (shouldDrawButtonAsDown)
         fillColour = primaryColour.darker(0.2f);
     else if (shouldDrawButtonAsHighlighted)
-        fillColour = darkAccentColour.brighter(0.1f);
+        fillColour = primaryColour.darker(0.5f);  // Dark pink on hover
 
     g.setColour(fillColour);
     g.fillRoundedRectangle(bounds, 4.0f);
 
     g.setColour(primaryColour);
-    g.drawRoundedRectangle(bounds, 4.0f, 1.5f);
+    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);  // Thinner border
 }
 
 void PinkGrainLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)

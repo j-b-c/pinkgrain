@@ -8,6 +8,7 @@
 #include "UI/LiveWaveformDisplay.h"
 #include "UI/ZoomedWaveformDisplay.h"
 #include "UI/VolumeControl.h"
+#include "UI/ADSRControl.h"
 
 class PinkGrainAudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -49,10 +50,10 @@ private:
     CustomDial sprayDial;
 
     // Parameter dials - Row 2
-    CustomDial attackDial;
-    CustomDial releaseDial;
+    ADSRControl adsrControl;
     juce::ToggleButton reverseButton;
     CustomDial pitchRandomDial;
+    CustomDial maxGrainsDial;
 
     // Parameter attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> volumeAttachment;
@@ -63,9 +64,12 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> sprayAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> decayAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> sustainAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> reverseAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> pitchRandomAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> maxGrainsAttachment;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
 

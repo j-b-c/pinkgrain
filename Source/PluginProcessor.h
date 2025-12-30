@@ -69,11 +69,14 @@ public:
     static const juce::String PITCH_ID;
     static const juce::String PAN_SPREAD_ID;
     static const juce::String ATTACK_ID;
+    static const juce::String DECAY_ID;
+    static const juce::String SUSTAIN_ID;
     static const juce::String RELEASE_ID;
     static const juce::String REVERSE_ID;
     static const juce::String SPRAY_ID;
     static const juce::String PITCH_RANDOM_ID;
     static const juce::String VOLUME_ID;
+    static const juce::String MAX_GRAINS_ID;
 
 private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

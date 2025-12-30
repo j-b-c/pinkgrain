@@ -11,6 +11,8 @@ void Grain::start(const juce::AudioBuffer<float>& sourceBuffer,
                   float pitch,
                   float pan,
                   float attack,
+                  float decay,
+                  float sustain,
                   float release,
                   bool rev,
                   float vel,
@@ -22,6 +24,8 @@ void Grain::start(const juce::AudioBuffer<float>& sourceBuffer,
     grainLength = grainLengthSamples;
     pitchRatio = pitch;
     attackSamples = attack;
+    decaySamples = decay;
+    sustainLevel = sustain;
     releaseSamples = release;
     reverse = rev;
     velocity = vel;
@@ -157,18 +161,33 @@ float Grain::getEnvelope()
 
     float env = 1.0f;
 
+    // ADSR envelope
     // Attack phase
     if (attackSamples > 0.0f && samplesProcessed < static_cast<int>(attackSamples))
     {
         env = static_cast<float>(samplesProcessed) / attackSamples;
     }
-    // Natural release phase (at end of grain)
-    else if (releaseSamples > 0.0f)
+    // Decay phase
+    else if (decaySamples > 0.0f && samplesProcessed < static_cast<int>(attackSamples + decaySamples))
     {
-        int releaseStart = grainLength - static_cast<int>(releaseSamples);
-        if (samplesProcessed >= releaseStart)
+        int decaySample = samplesProcessed - static_cast<int>(attackSamples);
+        float decayProgress = static_cast<float>(decaySample) / decaySamples;
+        env = 1.0f - (1.0f - sustainLevel) * decayProgress;
+    }
+    // Sustain phase
+    else
+    {
+        env = sustainLevel;
+
+        // Natural release phase (at end of grain)
+        if (releaseSamples > 0.0f)
         {
-            env = 1.0f - (static_cast<float>(samplesProcessed - releaseStart) / releaseSamples);
+            int releaseStart = grainLength - static_cast<int>(releaseSamples);
+            if (samplesProcessed >= releaseStart)
+            {
+                float releaseProgress = static_cast<float>(samplesProcessed - releaseStart) / releaseSamples;
+                env = sustainLevel * (1.0f - releaseProgress);
+            }
         }
     }
 

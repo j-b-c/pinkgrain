@@ -140,8 +140,17 @@ void ZoomedWaveformDisplay::drawGrains(juce::Graphics& g, juce::Rectangle<int> b
         // Alpha based on envelope level - this shows attack/release
         float alpha = grain.envelopeLevel * 0.9f + 0.1f;
 
+        // Color based on MIDI note (lower notes = darker, higher notes = lighter)
+        // Map MIDI range 36-96 (5 octaves) to brightness range
+        int midiNote = grain.midiNote;
+        float brightness = juce::jlimit(0.0f, 1.0f, (static_cast<float>(midiNote - 36) / 60.0f));
+
+        // Interpolate between dark and light color based on note
+        juce::Colour grainColour = PinkGrainLookAndFeel::secondaryColour.interpolatedWith(
+            juce::Colours::white, brightness * 0.6f);
+
         // Draw 3x3 dot
-        g.setColour(PinkGrainLookAndFeel::secondaryColour.withAlpha(alpha));
+        g.setColour(grainColour.withAlpha(alpha));
         g.fillRect(x - dotSize * 0.5f, y - dotSize * 0.5f, dotSize, dotSize);
     }
 }

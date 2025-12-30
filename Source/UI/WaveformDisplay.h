@@ -26,6 +26,7 @@ public:
 
     // Callback for position changes from mouse drag
     std::function<void(float)> onPositionChanged;
+    std::function<void(float)> onSizeChanged;
 
 private:
     void onVBlank();
@@ -33,6 +34,7 @@ private:
     void drawGrainWindow(juce::Graphics& g, juce::Rectangle<int> bounds);
 
     void updatePositionFromMouse(const juce::MouseEvent& event);
+    void updateSizeFromMouse(const juce::MouseEvent& event);
 
     AudioFileLoader& audioFileLoader;
 
@@ -42,7 +44,8 @@ private:
     int sourceLengthSamples = 0;
 
     // Mouse drag state
-    bool isDragging = false;
+    enum class DragMode { None, LeftHandle, RightHandle, ClickPosition };
+    DragMode dragMode = DragMode::None;
 
     // VBlank sync for display refresh rate
     juce::VBlankAttachment vBlankAttachment;

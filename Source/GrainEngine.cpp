@@ -72,8 +72,9 @@ void GrainEngine::process(juce::AudioBuffer<float>& outputBuffer)
     // Spawn new grains if notes are active
     if (!activeNotes.empty() && density > 0.0f)
     {
-        // Density is distributed across all active notes
-        double samplesPerGrain = outputSampleRate / static_cast<double>(density);
+        // Each active note contributes to the total density
+        double effectiveDensity = density * static_cast<double>(activeNotes.size());
+        double samplesPerGrain = outputSampleRate / effectiveDensity;
 
         for (int i = 0; i < numSamples; ++i)
         {
@@ -146,33 +147,52 @@ void GrainEngine::spawnGrain(int midiNote, float velocity)
         pan = 0.5f + (random.nextFloat() - 0.5f) * panSpread;
     }
 
-    // Attack and release in samples
+    // ADSR envelope in samples
     float attackSamples = (attackMs / 1000.0f) * static_cast<float>(sourceSampleRate);
+    float decaySamples = (decayMs / 1000.0f) * static_cast<float>(sourceSampleRate);
     float releaseSamples = (releaseMs / 1000.0f) * static_cast<float>(sourceSampleRate);
 
-    // Ensure attack + release don't exceed grain length
-    float totalEnvSamples = attackSamples + releaseSamples;
+    // Ensure attack + decay + release don't exceed grain length
+    float totalEnvSamples = attackSamples + decaySamples + releaseSamples;
     if (totalEnvSamples > grainLengthSamples)
     {
         float scale = static_cast<float>(grainLengthSamples) / totalEnvSamples;
         attackSamples *= scale;
+        decaySamples *= scale;
         releaseSamples *= scale;
     }
 
     grain->start(*sourceBuffer, sourceSampleRate, startSample, grainLengthSamples,
-                 pitchRatio, pan, attackSamples, releaseSamples, reverse, velocity, midiNote);
+                 pitchRatio, pan, attackSamples, decaySamples, sustainLevel, releaseSamples,
+                 reverse, velocity, midiNote);
 }
 
 Grain* GrainEngine::getInactiveGrain()
 {
-    for (auto& grain : grains)
+    // First, try to find an inactive grain within the active pool
+    for (int i = 0; i < maxActiveGrains; ++i)
     {
-        if (!grain->isActive())
+        if (!grains[i]->isActive())
         {
-            return grain.get();
+            return grains[i].get();
         }
     }
-    return nullptr;  // All grains in use
+
+    // If all active grains are in use, steal the one that's furthest along (voice stealing)
+    Grain* oldestGrain = nullptr;
+    float maxProgress = 0.0f;
+
+    for (int i = 0; i < maxActiveGrains; ++i)
+    {
+        float progress = grains[i]->getProgress();
+        if (progress > maxProgress)
+        {
+            maxProgress = progress;
+            oldestGrain = grains[i].get();
+        }
+    }
+
+    return oldestGrain;  // Will reuse the grain closest to completion
 }
 
 void GrainEngine::setGrainSize(float sizeMs)
@@ -205,9 +225,19 @@ void GrainEngine::setAttack(float attack)
     attackMs = juce::jlimit(0.0f, 100.0f, attack);
 }
 
+void GrainEngine::setDecay(float decay)
+{
+    decayMs = juce::jlimit(0.0f, 500.0f, decay);
+}
+
+void GrainEngine::setSustain(float sustain)
+{
+    sustainLevel = juce::jlimit(0.0f, 1.0f, sustain);
+}
+
 void GrainEngine::setRelease(float release)
 {
-    releaseMs = juce::jlimit(0.0f, 500.0f, release);
+    releaseMs = juce::jlimit(0.0f, 5000.0f, release);
 }
 
 void GrainEngine::setReverse(bool rev)
@@ -230,6 +260,11 @@ void GrainEngine::setVolume(float vol)
     volume = juce::jlimit(0.0f, 1.0f, vol);
 }
 
+void GrainEngine::setMaxActiveGrains(int maxGrains)
+{
+    maxActiveGrains = juce::jlimit(64, MAX_GRAINS, maxGrains);
+}
+
 std::vector<GrainInfo> GrainEngine::getActiveGrainInfo() const
 {
     std::vector<GrainInfo> info;
@@ -243,6 +278,7 @@ std::vector<GrainInfo> GrainEngine::getActiveGrainInfo() const
             gi.normalizedPosition = grain->getCurrentPosition();
             gi.grainProgress = grain->getProgress();
             gi.envelopeLevel = grain->getEnvelopeLevel();
+            gi.midiNote = grain->getMidiNote();
 
             int sourceLength = grain->getSourceLength();
             if (sourceLength > 0)

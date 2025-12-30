@@ -14,6 +14,8 @@ public:
                float pitchRatio,
                float pan,
                float attackSamples,
+               float decaySamples,
+               float sustainLevel,
                float releaseSamples,
                bool reverse,
                float velocity,
@@ -51,6 +53,8 @@ private:
     float panLeft = 1.0f;
     float panRight = 1.0f;
     float attackSamples = 0.0f;
+    float decaySamples = 0.0f;
+    float sustainLevel = 1.0f;
     float releaseSamples = 0.0f;
     bool reverse = false;
     float velocity = 1.0f;

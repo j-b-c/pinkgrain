@@ -57,16 +57,57 @@ void WaveformDisplay::onVBlank()
 
 void WaveformDisplay::mouseDown(const juce::MouseEvent& event)
 {
-    if (audioFileLoader.hasFile())
+    if (!audioFileLoader.hasFile() || positionParameter == nullptr || grainSizeParameter == nullptr)
+        return;
+
+    auto bounds = getLocalBounds().reduced(2);
+    if (bounds.isEmpty())
+        return;
+
+    float position = positionParameter->load();
+    float grainSizeMs = grainSizeParameter->load();
+
+    // Calculate grain window boundaries
+    double fileLengthMs = (static_cast<double>(sourceLengthSamples) / sourceSampleRate) * 1000.0;
+    float windowWidth = static_cast<float>(grainSizeMs / fileLengthMs);
+    windowWidth = juce::jlimit(0.001f, 1.0f, windowWidth);
+
+    float windowStart = position;
+    float windowEnd = juce::jmin(1.0f, windowStart + windowWidth);
+
+    float startX = bounds.getX() + windowStart * bounds.getWidth();
+    float endX = bounds.getX() + windowEnd * bounds.getWidth();
+
+    // Check if clicking near handles (within 8 pixels)
+    const float handleTolerance = 8.0f;
+    float mouseX = static_cast<float>(event.x);
+
+    if (std::abs(mouseX - startX) < handleTolerance)
     {
-        isDragging = true;
+        dragMode = DragMode::LeftHandle;
+    }
+    else if (std::abs(mouseX - endX) < handleTolerance)
+    {
+        dragMode = DragMode::RightHandle;
+    }
+    else
+    {
+        dragMode = DragMode::ClickPosition;
         updatePositionFromMouse(event);
     }
 }
 
 void WaveformDisplay::mouseDrag(const juce::MouseEvent& event)
 {
-    if (isDragging)
+    if (dragMode == DragMode::LeftHandle)
+    {
+        updatePositionFromMouse(event);
+    }
+    else if (dragMode == DragMode::RightHandle)
+    {
+        updateSizeFromMouse(event);
+    }
+    else if (dragMode == DragMode::ClickPosition)
     {
         updatePositionFromMouse(event);
     }
@@ -74,7 +115,7 @@ void WaveformDisplay::mouseDrag(const juce::MouseEvent& event)
 
 void WaveformDisplay::mouseUp(const juce::MouseEvent& /*event*/)
 {
-    isDragging = false;
+    dragMode = DragMode::None;
 }
 
 void WaveformDisplay::updatePositionFromMouse(const juce::MouseEvent& event)
@@ -91,6 +132,39 @@ void WaveformDisplay::updatePositionFromMouse(const juce::MouseEvent& event)
     if (onPositionChanged)
     {
         onPositionChanged(newPosition);
+    }
+}
+
+void WaveformDisplay::updateSizeFromMouse(const juce::MouseEvent& event)
+{
+    if (positionParameter == nullptr || sourceLengthSamples <= 0 || sourceSampleRate <= 0.0)
+        return;
+
+    auto bounds = getLocalBounds().reduced(2);
+    if (bounds.isEmpty())
+        return;
+
+    float position = positionParameter->load();
+    float x = static_cast<float>(event.x - bounds.getX());
+    float width = static_cast<float>(bounds.getWidth());
+
+    // Calculate normalized end position
+    float normalizedEnd = juce::jlimit(0.0f, 1.0f, x / width);
+
+    // Calculate window width from position to end
+    float windowWidth = normalizedEnd - position;
+    windowWidth = juce::jlimit(0.001f, 1.0f - position, windowWidth);
+
+    // Convert to grain size in milliseconds
+    double fileLengthMs = (static_cast<double>(sourceLengthSamples) / sourceSampleRate) * 1000.0;
+    float newSizeMs = static_cast<float>(windowWidth * fileLengthMs);
+
+    // Clamp to valid range (10ms to 30000ms based on the parameter range)
+    newSizeMs = juce::jlimit(10.0f, 30000.0f, newSizeMs);
+
+    if (onSizeChanged)
+    {
+        onSizeChanged(newSizeMs);
     }
 }
 
@@ -179,9 +253,18 @@ void WaveformDisplay::drawGrainWindow(juce::Graphics& g, juce::Rectangle<int> bo
         g.reduceClipRegion(getLocalBounds());
     }
 
-    // Draw window borders
-    g.setColour(PinkGrainLookAndFeel::primaryColour.withAlpha(0.8f));
-    g.drawVerticalLine(static_cast<int>(startX), static_cast<float>(bounds.getY()), static_cast<float>(bounds.getBottom()));
-    g.drawVerticalLine(static_cast<int>(endX), static_cast<float>(bounds.getY()), static_cast<float>(bounds.getBottom()));
+    // Draw drag handles as thicker, more visible rectangles
+    const float handleWidth = 4.0f;
+    g.setColour(PinkGrainLookAndFeel::primaryColour);
+
+    // Left handle (position)
+    juce::Rectangle<float> leftHandle(startX - handleWidth * 0.5f, static_cast<float>(bounds.getY()),
+                                       handleWidth, static_cast<float>(bounds.getHeight()));
+    g.fillRect(leftHandle);
+
+    // Right handle (size)
+    juce::Rectangle<float> rightHandle(endX - handleWidth * 0.5f, static_cast<float>(bounds.getY()),
+                                        handleWidth, static_cast<float>(bounds.getHeight()));
+    g.fillRect(rightHandle);
 }
 

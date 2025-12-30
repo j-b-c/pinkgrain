@@ -12,9 +12,8 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
       pitchDial("PITCH"),
       panDial("PAN"),
       sprayDial("SPRAY"),
-      attackDial("ATTACK"),
-      releaseDial("RELEASE"),
-      pitchRandomDial("PITCH RND")
+      pitchRandomDial("PITCH RND"),
+      maxGrainsDial("MAX GRAINS")
 {
     setLookAndFeel(&lookAndFeel);
 
@@ -63,6 +62,15 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
         }
     };
 
+    // Set up mouse drag callback to update size parameter
+    waveformDisplay.onSizeChanged = [this](float newSizeMs)
+    {
+        if (auto* param = audioProcessor.getApvts().getParameter(PinkGrainAudioProcessor::GRAIN_SIZE_ID))
+        {
+            param->setValueNotifyingHost(param->convertTo0to1(newSizeMs));
+        }
+    };
+
     // Row 1 dials
     addAndMakeVisible(sizeDial);
     addAndMakeVisible(densityDial);
@@ -71,9 +79,8 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
     addAndMakeVisible(panDial);
     addAndMakeVisible(sprayDial);
 
-    // Row 2 dials
-    addAndMakeVisible(attackDial);
-    addAndMakeVisible(releaseDial);
+    // Row 2 - ADSR control
+    addAndMakeVisible(adsrControl);
 
     reverseButton.setButtonText("REVERSE");
     reverseButton.setColour(juce::ToggleButton::textColourId, PinkGrainLookAndFeel::textColour);
@@ -81,6 +88,7 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
     addAndMakeVisible(reverseButton);
 
     addAndMakeVisible(pitchRandomDial);
+    addAndMakeVisible(maxGrainsDial);
 
     // Parameter attachments
     auto& apvts = audioProcessor.getApvts();
@@ -107,16 +115,25 @@ PinkGrainAudioProcessorEditor::PinkGrainAudioProcessorEditor(PinkGrainAudioProce
         apvts, PinkGrainAudioProcessor::SPRAY_ID, sprayDial.getSlider());
 
     attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvts, PinkGrainAudioProcessor::ATTACK_ID, attackDial.getSlider());
+        apvts, PinkGrainAudioProcessor::ATTACK_ID, adsrControl.getAttackSlider());
+
+    decayAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        apvts, PinkGrainAudioProcessor::DECAY_ID, adsrControl.getDecaySlider());
+
+    sustainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        apvts, PinkGrainAudioProcessor::SUSTAIN_ID, adsrControl.getSustainSlider());
 
     releaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvts, PinkGrainAudioProcessor::RELEASE_ID, releaseDial.getSlider());
+        apvts, PinkGrainAudioProcessor::RELEASE_ID, adsrControl.getReleaseSlider());
 
     reverseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         apvts, PinkGrainAudioProcessor::REVERSE_ID, reverseButton);
 
     pitchRandomAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         apvts, PinkGrainAudioProcessor::PITCH_RANDOM_ID, pitchRandomDial.getSlider());
+
+    maxGrainsAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        apvts, PinkGrainAudioProcessor::MAX_GRAINS_ID, maxGrainsDial.getSlider());
 
     setSize(800, 600);
 }
@@ -139,9 +156,9 @@ void PinkGrainAudioProcessorEditor::resized()
 
     // Header row
     auto headerRow = bounds.removeFromTop(50);
-    loadFileButton.setBounds(headerRow.removeFromLeft(70));
+    loadFileButton.setBounds(headerRow.removeFromLeft(70).reduced(0, 10));
     headerRow.removeFromLeft(5);
-    savePresetButton.setBounds(headerRow.removeFromLeft(70));
+    savePresetButton.setBounds(headerRow.removeFromLeft(70).reduced(0, 10));
     headerRow.removeFromLeft(5);
     presetCombo.setBounds(headerRow.removeFromLeft(150).reduced(0, 10));
     headerRow.removeFromLeft(10);
@@ -184,16 +201,22 @@ void PinkGrainAudioProcessorEditor::resized()
     bounds.removeFromTop(10);
 
     // Parameter dials - Row 2
-    auto row2 = bounds.removeFromTop(90);
-    const int row2Width = row2.getWidth() / 4;
+    // Use remaining height for ADSR (taller bars)
+    auto row2 = bounds;
 
-    attackDial.setBounds(row2.removeFromLeft(row2Width));
-    releaseDial.setBounds(row2.removeFromLeft(row2Width));
+    // ADSR control on left (about 200px wide)
+    adsrControl.setBounds(row2.removeFromLeft(200));
+    row2.removeFromLeft(20);
 
-    auto reverseArea = row2.removeFromLeft(row2Width);
+    // Remaining space split for reverse button, pitch random, and max grains (use top 90px)
+    auto controlsArea = row2.removeFromTop(90);
+    const int remainingWidth = controlsArea.getWidth() / 3;
+
+    auto reverseArea = controlsArea.removeFromLeft(remainingWidth);
     reverseButton.setBounds(reverseArea.reduced(20, 30));
 
-    pitchRandomDial.setBounds(row2.removeFromLeft(row2Width));
+    pitchRandomDial.setBounds(controlsArea.removeFromLeft(remainingWidth));
+    maxGrainsDial.setBounds(controlsArea.removeFromLeft(remainingWidth));
 }
 
 void PinkGrainAudioProcessorEditor::loadFileButtonClicked()

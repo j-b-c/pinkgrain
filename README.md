@@ -6,9 +6,10 @@ A granular synthesizer plugin built with JUCE. Supports VST3 and AU formats on m
 
 - **Granular Synthesis**: Load any audio file and transform it into evolving textures
 - **MIDI Control**: Pitch follows MIDI notes (middle C plays at original pitch)
-- **Real-time Visualization**: Waveform display with grain window overlay
+- **Real-time Visualization**: Waveform display with grain window overlay and interactive drag handles
 - **Zoomed Grain Window**: Dedicated display showing zoomed-in grain window with animated grain dots
-- **Click-and-Drag Position**: Click and drag on the waveform to set playback position
+- **Interactive Controls**: Click and drag on the waveform to set playback position, or drag the left/right handles to adjust position and size
+- **Note-Based Visualization**: Grain dots shade by pitch (darker for low notes, brighter for high notes)
 - **Live Output Display**: See the output waveform in real-time
 - **VBlank Sync**: Display updates synchronized to monitor refresh rate
 - **Preset System**: Save and load presets with automatic storage
@@ -26,10 +27,13 @@ A granular synthesizer plugin built with JUCE. Supports VST3 and AU formats on m
 | Pan Spread | 0 - 100% | Stereo spread of grains |
 | Spray | 0 - 100% | Randomization of grain start position |
 | Attack | 0 - 100ms | Grain envelope attack time |
-| Release | 0 - 500ms | Grain envelope release time |
+| Decay | 0 - 500ms | Grain envelope decay time |
+| Sustain | 0 - 100% | Grain envelope sustain level |
+| Release | 0 - 5s | Grain envelope release time |
 | Reverse | On/Off | Play grains in reverse |
 | Pitch Rnd | 0 - 24 st | Random pitch variation |
 | Volume | 0 - 100% | Master output volume |
+| Max Grains | 64 - 2048 | Maximum number of simultaneous grains |
 
 ### Supported Audio Formats
 
@@ -82,10 +86,11 @@ synth/
     └── UI/
         ├── LookAndFeel.h/cpp           # Pink/black theme
         ├── CustomDial.h/cpp            # Rotary dial component
-        ├── WaveformDisplay.h/cpp       # File waveform with grain window
-        ├── ZoomedWaveformDisplay.h/cpp # Zoomed grain window with dots
+        ├── WaveformDisplay.h/cpp       # File waveform with interactive handles
+        ├── ZoomedWaveformDisplay.h/cpp # Zoomed grain window with note-shaded dots
         ├── LiveWaveformDisplay.h/cpp   # Real-time output waveform
-        └── VolumeControl.h/cpp         # Volume slider with level meter
+        ├── VolumeControl.h/cpp         # Volume slider with level meter
+        └── ADSRControl.h/cpp           # ADSR envelope vertical bars
 ```
 
 ## UI Theme

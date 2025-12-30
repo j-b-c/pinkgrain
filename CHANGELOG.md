@@ -2,6 +2,23 @@
 
 All notable changes to PinkGrain will be documented in this file.
 
+## [1.3.0] - 2025-12-30
+
+### Added
+- **ADSR Envelope System**: Full Attack, Decay, Sustain, Release envelope control with vertical bars and value displays
+- **User-Configurable Grain Pool**: New MAX GRAINS dial allows adjusting active grain pool from 64 to 2048 grains
+- **Note-Based Grain Visualization**: Grain dots now shade based on triggering MIDI note (darker for low notes, brighter for high notes)
+- **Interactive Waveform Handles**: Drag handles on waveform display to adjust position (left handle) and size (right handle) parameters
+
+### Changed
+- Maximum grain pool size increased from 1024 to 2048 grains
+- Attack and Release controls replaced with full ADSR envelope system
+- Grain window handles now drawn as thicker, more visible pink rectangles
+- Release envelope extended to 5 seconds maximum (from 500ms)
+
+### Fixed
+- Voice stealing algorithm now respects user-defined grain pool size limit
+
 ## [1.2.0] - 2025-12-26
 
 ### Added

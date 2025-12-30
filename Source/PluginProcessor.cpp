@@ -10,11 +10,14 @@ const juce::String PinkGrainAudioProcessor::POSITION_ID = "position";
 const juce::String PinkGrainAudioProcessor::PITCH_ID = "pitch";
 const juce::String PinkGrainAudioProcessor::PAN_SPREAD_ID = "panSpread";
 const juce::String PinkGrainAudioProcessor::ATTACK_ID = "attack";
+const juce::String PinkGrainAudioProcessor::DECAY_ID = "decay";
+const juce::String PinkGrainAudioProcessor::SUSTAIN_ID = "sustain";
 const juce::String PinkGrainAudioProcessor::RELEASE_ID = "release";
 const juce::String PinkGrainAudioProcessor::REVERSE_ID = "reverse";
 const juce::String PinkGrainAudioProcessor::SPRAY_ID = "spray";
 const juce::String PinkGrainAudioProcessor::PITCH_RANDOM_ID = "pitchRandom";
 const juce::String PinkGrainAudioProcessor::VOLUME_ID = "volume";
+const juce::String PinkGrainAudioProcessor::MAX_GRAINS_ID = "maxGrains";
 
 PinkGrainAudioProcessor::PinkGrainAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -98,13 +101,37 @@ juce::AudioProcessorValueTreeState::ParameterLayout PinkGrainAudioProcessor::cre
         nullptr));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID(RELEASE_ID, 1),
-        "Release",
+        juce::ParameterID(DECAY_ID, 1),
+        "Decay",
         juce::NormalisableRange<float>(0.0f, 500.0f, 1.0f, 0.5f),
         50.0f,
         juce::String(),
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(value, 0) + " ms"; },
+        nullptr));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID(SUSTAIN_ID, 1),
+        "Sustain",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
+        0.8f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) { return juce::String(static_cast<int>(value * 100)) + "%"; },
+        nullptr));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID(RELEASE_ID, 1),
+        "Release",
+        juce::NormalisableRange<float>(0.0f, 5000.0f, 1.0f, 0.5f),
+        50.0f,
+        juce::String(),
+        juce::AudioProcessorParameter::genericParameter,
+        [](float value, int) {
+            if (value >= 1000.0f)
+                return juce::String(value / 1000.0f, 2) + " s";
+            return juce::String(value, 0) + " ms";
+        },
         nullptr));
 
     params.push_back(std::make_unique<juce::AudioParameterBool>(
@@ -141,6 +168,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout PinkGrainAudioProcessor::cre
         juce::AudioProcessorParameter::genericParameter,
         [](float value, int) { return juce::String(static_cast<int>(value * 100)) + "%"; },
         nullptr));
+
+    params.push_back(std::make_unique<juce::AudioParameterInt>(
+        juce::ParameterID(MAX_GRAINS_ID, 1),
+        "Max Grains",
+        64, 2048, 512));
 
     return { params.begin(), params.end() };
 }
@@ -280,11 +312,14 @@ void PinkGrainAudioProcessor::updateGrainEngineParameters()
     grainEngine.setPitch(*apvts.getRawParameterValue(PITCH_ID));
     grainEngine.setPanSpread(*apvts.getRawParameterValue(PAN_SPREAD_ID));
     grainEngine.setAttack(*apvts.getRawParameterValue(ATTACK_ID));
+    grainEngine.setDecay(*apvts.getRawParameterValue(DECAY_ID));
+    grainEngine.setSustain(*apvts.getRawParameterValue(SUSTAIN_ID));
     grainEngine.setRelease(*apvts.getRawParameterValue(RELEASE_ID));
     grainEngine.setReverse(*apvts.getRawParameterValue(REVERSE_ID) > 0.5f);
     grainEngine.setSpray(*apvts.getRawParameterValue(SPRAY_ID));
     grainEngine.setPitchRandom(*apvts.getRawParameterValue(PITCH_RANDOM_ID));
     grainEngine.setVolume(*apvts.getRawParameterValue(VOLUME_ID));
+    grainEngine.setMaxActiveGrains(static_cast<int>(*apvts.getRawParameterValue(MAX_GRAINS_ID)));
 }
 
 bool PinkGrainAudioProcessor::hasEditor() const
